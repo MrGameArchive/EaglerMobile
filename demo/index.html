@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Play minecraft 1.8 in your browser" />
+    <meta name="keywords" content="eaglercraft, eaglercraftx, minecraft, 1.8, 1.8.8" />
+    <title>EaglercraftX 1.8</title>
+    <meta property="og:locale" content="en-US" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="EaglercraftX 1.8" />
+    <meta property="og:description" content="Play minecraft 1.8 in your browser" />
+    <meta property="og:image" content="favicon.png" />
+    <link type="image/png" rel="shortcut icon" href="favicon.png" />
+    <script type="text/javascript" src="classes.js"></script>
+    <script type="text/javascript" src="eaglerpocketmobile.user.js"></script>
+    <script type="text/javascript">
+      "use strict";
+      window.addEventListener("load", () => {
+        if (document.location.href.startsWith("file:")) {
+          alert(
+            "HTTP please, do not open this file locally, run a local HTTP server and load it via HTTP"
+          );
+        } else {
+          const relayId = Math.floor(Math.random() * 3);
+          window.eaglercraftXOpts = {
+            demoMode: false,
+            container: "game_frame",
+            assetsURI: "assets.epk",
+            localesURI: "lang/",
+            worldsDB: "worlds",
+            servers: [
+              { addr: "wss://65.254.21.222:8080/wss://mcus1.dxomg.link", name: "US Texas Proxy" },
+              { addr: "wss://65.254.21.222:8080/wss://mcus2.dxomg.link", name: "US North Carolina Proxy" },
+              { addr: "wss://65.254.21.222:8080/wss://mcus3.dxomg.link", name: "US Kansas City Proxy" },
+              { addr: "wss://65.254.21.222:8080/wss://mcus4.dxomg.link", name: "US Michigan Proxy" },
+              { addr: "wss://65.254.21.222:8080/wss://mcde2.dxomg.link", name: "DE Berlin Proxy" },
+              { addr: "wss://65.254.21.222:8080/wss://proxy.theludos.com/", name: "TheLudos Proxy" },
+              { addr: "wss://65.254.21.222:8080/wss://x.mess.eu.org/", name: "MessCraft Proxy" }
+            ],
+            relays: [
+              { addr: "wss://65.254.21.222:8080/wss://relay.deev.is/", comment: "proxy: deev", primary: relayId == 0 },
+              { addr: "wss://65.254.21.222:8080/wss://relay.lax1dude.net/", comment: "proxy: lax1", primary: relayId == 1 },
+              { addr: "wss://65.254.21.222:8080/wss://relay.shhnowisnottheti.me/", comment: "proxy: ayunami", primary: relayId == 2 }
+            ]
+          };
+          
+          var q = window.location.search;
+          if (typeof q === "string" && q.startsWith("?")) {
+            q = new URLSearchParams(q);
+            var s = q.get("server");
+            if (s) window.eaglercraftXOpts.joinServer = s;
+          }
+          
+          main();
+          console.log("💀 connected to relay via local proxy (wss://65.254.21.222:8080)");
+        }
+      });
+    </script>
+  </head>
+  <body style="margin:0px;width:100vw;height:100vh;overflow:hidden;" id="game_frame">
+  </body>
+
+  <script type="text/javascript">
+    // Proxy server (Node.js)
+    if (typeof window === "undefined") {
+      const https = require('https');
+      const fs = require('fs');
+      const WebSocket = require('ws');
+      
+      // Load your SSL certificates
+      const serverOptions = {
+        cert: fs.readFileSync('path/to/your/cert.pem'),
+        key: fs.readFileSync('path/to/your/key.pem')
+      };
+
+      const server = https.createServer(serverOptions);
+      const wss = new WebSocket.Server({ noServer: true });
+
+      // Handle WebSocket upgrade requests
+      server.on('upgrade', (req, socket, head) => {
+        const url = req.url.slice(1); // remove "/" in "/wss://..."
+        console.log("Proxying to", url);
+        
+        try {
+          const target = new WebSocket(url);
+          
+          wss.handleUpgrade(req, socket, head, (client) => {
+            target.on('open', () => {
+              client.on('message', (msg) => target.send(msg));
+              target.on('message', (msg) => client.send(msg));
+            });
+
+            target.on('close', () => client.close());
+            client.on('close', () => target.close());
+          });
+        } catch {
+          socket.destroy();
+        }
+      });
+
+      server.listen(8080, () => {
+        console.log("Proxy server running on wss://65.254.21.222:8080");
+      });
+    }
+  </script>
+</html>
