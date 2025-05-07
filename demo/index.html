@@ -26,7 +26,6 @@
           window.eaglercraftXOpts = {
             demoMode: false,
             container: "game_frame",
-            assetsURI: "assets.epk",
             localesURI: "lang/",
             worldsDB: "worlds",
             servers: [
@@ -37,22 +36,35 @@
               { addr: "wss://65.254.21.222:8080/wss://mcde2.dxomg.link", name: "DE Berlin Proxy" },
               { addr: "wss://65.254.21.222:8080/wss://proxy.theludos.com/", name: "TheLudos Proxy" },
               { addr: "wss://65.254.21.222:8080/wss://x.mess.eu.org/", name: "MessCraft Proxy" }
-            ],
-            relays: [
-              { addr: "wss://65.254.21.222:8080/wss://relay.deev.is/", comment: "proxy: deev", primary: relayId == 0 },
-              { addr: "wss://65.254.21.222:8080/wss://relay.lax1dude.net/", comment: "proxy: lax1", primary: relayId == 1 },
-              { addr: "wss://65.254.21.222:8080/wss://relay.shhnowisnottheti.me/", comment: "proxy: ayunami", primary: relayId == 2 }
             ]
           };
-          
+
+          // Fetch the .epk file and process it
+          fetch('assets.epk')
+            .then(response => response.arrayBuffer())  // Get the file as ArrayBuffer
+            .then(buffer => {
+              // Handle the buffer (you'd need to extract its contents here)
+              console.log("💀 assets.epk loaded successfully", buffer);
+
+              // Assuming you need to load specific content from the buffer
+              // you would extract the data here and pass it to your game engine
+              window.eaglercraftXOpts.assetsURI = buffer;  // Modify this part based on your game engine needs
+              
+              // Proceed to initialize the game
+              main();
+            })
+            .catch(error => {
+              console.error("Failed to load assets.epk:", error);
+              alert("Error loading assets.epk. Make sure the file is accessible.");
+            });
+
           var q = window.location.search;
           if (typeof q === "string" && q.startsWith("?")) {
             q = new URLSearchParams(q);
             var s = q.get("server");
             if (s) window.eaglercraftXOpts.joinServer = s;
           }
-          
-          main();
+
           console.log("💀 connected to relay via local proxy (wss://65.254.21.222:8080)");
         }
       });
@@ -60,48 +72,4 @@
   </head>
   <body style="margin:0px;width:100vw;height:100vh;overflow:hidden;" id="game_frame">
   </body>
-
-  <script type="text/javascript">
-    // Proxy server (Node.js)
-    if (typeof window === "undefined") {
-      const https = require('https');
-      const fs = require('fs');
-      const WebSocket = require('ws');
-      
-      // Load your SSL certificates
-      const serverOptions = {
-        cert: fs.readFileSync('path/to/your/cert.pem'),
-        key: fs.readFileSync('path/to/your/key.pem')
-      };
-
-      const server = https.createServer(serverOptions);
-      const wss = new WebSocket.Server({ noServer: true });
-
-      // Handle WebSocket upgrade requests
-      server.on('upgrade', (req, socket, head) => {
-        const url = req.url.slice(1); // remove "/" in "/wss://..."
-        console.log("Proxying to", url);
-        
-        try {
-          const target = new WebSocket(url);
-          
-          wss.handleUpgrade(req, socket, head, (client) => {
-            target.on('open', () => {
-              client.on('message', (msg) => target.send(msg));
-              target.on('message', (msg) => client.send(msg));
-            });
-
-            target.on('close', () => client.close());
-            client.on('close', () => target.close());
-          });
-        } catch {
-          socket.destroy();
-        }
-      });
-
-      server.listen(8080, () => {
-        console.log("Proxy server running on wss://65.254.21.222:8080");
-      });
-    }
-  </script>
 </html>
